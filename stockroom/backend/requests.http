@@ -1,0 +1,26 @@
+@baseUrl = http://localhost:5080
+GET {{baseUrl}}/api/health
+### List
+GET {{baseUrl}}/api/products
+### Create
+POST {{baseUrl}}/api/products
+Content-Type: application/json
+
+{
+  "name": "Wireless keyboard",
+  "sku": "ACC-1042",
+  "category": "Accessories",
+  "quantity": 48
+}
+### Update (replace id as needed)
+PUT {{baseUrl}}/api/products/1
+Content-Type: application/json
+
+{
+  "name": "Wireless keyboard",
+  "sku": "ACC-1042",
+  "category": "Accessories",
+  "quantity": 48
+}
+### Delete
+DELETE {{baseUrl}}/api/products/1
