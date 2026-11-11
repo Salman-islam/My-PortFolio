@@ -1,0 +1,26 @@
+@baseUrl = http://localhost:5080
+GET {{baseUrl}}/api/health
+### List
+GET {{baseUrl}}/api/employees
+### Create
+POST {{baseUrl}}/api/employees
+Content-Type: application/json
+
+{
+  "name": "Ayesha Khan",
+  "email": "ayesha@example.com",
+  "department": "Engineering",
+  "status": "Active"
+}
+### Update (replace id as needed)
+PUT {{baseUrl}}/api/employees/1
+Content-Type: application/json
+
+{
+  "name": "Ayesha Khan",
+  "email": "ayesha@example.com",
+  "department": "Engineering",
+  "status": "Active"
+}
+### Delete
+DELETE {{baseUrl}}/api/employees/1
