@@ -1,0 +1,491 @@
+<div class="login" *ngIf="!user">
+  <section class="login-story">
+    <div class="brand">
+      <b>{{ config.title[0] }}</b
+      >{{ config.title }}
+    </div>
+    <span class="eyebrow">BUILT FOR THE WAY YOU WORK</span>
+    <h1>{{ config.description }}</h1>
+    <p>
+      {{ config.tag }} with connected workflows, clear permissions, and a
+      reliable record of every change.
+    </p>
+    <div class="login-tags">
+      <span>Angular</span><span>C# APIs</span><span>Microsoft SQL Server</span>
+    </div>
+  </section>
+  <section class="login-form">
+    <span class="eyebrow">YOUR WORKSPACE AWAITS</span>
+    <h2>Welcome back.</h2>
+    <p>Sign in to manage your workspace.</p>
+    <div class="alert error" *ngIf="error" role="alert">{{ error }}</div>
+    <form #loginForm="ngForm" (ngSubmit)="login()">
+      <label for="email">Email address</label
+      ><input
+        id="email"
+        type="email"
+        name="email"
+        [(ngModel)]="email"
+        required
+        email
+        autocomplete="username"
+      /><label for="password">Password</label
+      ><input
+        id="password"
+        type="password"
+        name="password"
+        [(ngModel)]="password"
+        required
+        autocomplete="current-password"
+      /><button class="primary wide" [disabled]="loginForm.invalid || busy">
+        {{ busy ? "Signing in…" : "Sign in" }}
+      </button>
+    </form>
+    <small>Local demo account details are in the project README.</small>
+  </section>
+</div>
+<div *ngIf="user" class="app-shell">
+  <aside>
+    <div class="brand">
+      <b>{{ config.title[0] }}</b
+      >{{ config.title }}
+    </div>
+    <small class="workspace-label">{{ config.tag }}</small>
+    <nav>
+      <a routerLink="/dashboard" [class.active]="key === 'dashboard'"
+        ><span>◈</span>Overview & reports</a
+      ><a
+        *ngFor="let p of nav"
+        [routerLink]="'/' + p.key"
+        [class.active]="key === p.key"
+        ><span>▦</span>{{ p.title }}</a
+      >
+    </nav>
+    <div class="sidebar-foot">
+      <strong>{{ user.name }}</strong
+      ><small>{{ user.role }} workspace</small
+      ><button (click)="logout()">Sign out ↗</button>
+    </div>
+  </aside>
+  <main>
+    <div class="topbar">
+      <span>{{ config.title }} <i>/</i> {{ page?.title || "Overview" }}</span
+      ><span class="top-user"
+        ><span class="live-dot"></span> {{ user.role }} <b>{{ user.name[0] }}</b
+        ><button class="text-button" (click)="logout()">Sign out</button></span
+      >
+    </div>
+    <header>
+      <div>
+        <span class="eyebrow">{{
+          key === "dashboard"
+            ? "WORKSPACE AT A GLANCE"
+            : "WORKSPACE / " + (page?.title || "")
+        }}</span>
+        <h1>{{ page?.title || "A clear view of your day." }}</h1>
+        <p>
+          {{
+            key === "dashboard"
+              ? config.description
+              : "Manage records and keep your team moving."
+          }}
+        </p>
+      </div>
+      <div class="header-actions">
+        <button class="secondary" (click)="refresh()" [disabled]="loading">
+          ↻ Refresh</button
+        ><button
+          class="primary"
+          *ngIf="page && can(page.createRoles)"
+          (click)="open(page)"
+        >
+          + Add record
+        </button>
+      </div>
+    </header>
+    <div class="alert error" *ngIf="error && !modal" role="alert">
+      {{ error }}
+    </div>
+    <div class="alert success" *ngIf="notice" role="status">{{ notice }}</div>
+    <div class="loading" *ngIf="loading" role="status">
+      Loading your workspace…
+    </div>
+    <section class="metrics" *ngIf="key === 'dashboard'">
+      <article *ngFor="let m of metrics; let i = index">
+        <div>
+          <span>{{ m.label }}</span
+          ><b>0{{ i + 1 }}</b>
+        </div>
+        <strong>{{ m.value }}</strong
+        ><small>Based on current workspace data</small>
+      </article>
+    </section>
+    <section class="overview-note" *ngIf="key === 'dashboard'">
+      <div>
+        <span class="eyebrow">CONNECTED WORKFLOWS</span>
+        <h2>One workspace. Every detail accounted for.</h2>
+        <p>
+          Use the navigation to manage records, follow approvals, and review
+          activity. Your permissions determine the actions available to you.
+        </p>
+      </div>
+      <a [routerLink]="'/' + config.primary"
+        >Open {{ tablePage.title.toLowerCase() }} →</a
+      >
+    </section>
+    <section
+      class="attendance-actions"
+      *ngIf="key === 'attendance' && user.role === 'Employee'"
+    >
+      <div>
+        <strong>Your working day</strong>
+        <p>Check-in and check-out use the server's UTC clock.</p>
+      </div>
+      <button
+        class="primary"
+        (click)="attendance('check-in')"
+        [disabled]="busy"
+      >
+        Check in</button
+      ><button
+        class="secondary"
+        (click)="attendance('check-out')"
+        [disabled]="busy"
+      >
+        Check out
+      </button>
+    </section>
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <h2>
+            {{
+              key === "dashboard"
+                ? "Latest " + tablePage.title.toLowerCase()
+                : tablePage.title
+            }}
+          </h2>
+          <small>{{ filtered.length }} records in this view</small>
+        </div>
+        <button class="text-button" (click)="exportCsv()">Export CSV ↓</button>
+      </div>
+      <div class="toolbar">
+        <input
+          type="search"
+          placeholder="Search records…"
+          aria-label="Search records"
+          [(ngModel)]="search"
+        /><select
+          *ngIf="tablePage.filter"
+          aria-label="Filter records"
+          [(ngModel)]="filter"
+        >
+          <option value="">All {{ tablePage.filter }}</option>
+          <option *ngFor="let v of filterOptions" [value]="v">{{ v }}</option>
+        </select>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th *ngFor="let c of tablePage.columns">{{ c.label }}</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of filtered">
+              <td *ngFor="let c of tablePage.columns">
+                <span
+                  [class.badge]="isBadge(c.key)"
+                  [class.warn]="
+                    ['Pending', 'High', 'Urgent', 'Open'].includes(row[c.key])
+                  "
+                  [class.good]="
+                    ['Approved', 'Posted', 'Resolved', 'Confirmed'].includes(
+                      row[c.key]
+                    )
+                  "
+                  >{{ display(row[c.key], c.key) }}</span
+                >
+              </td>
+              <td class="row-actions">
+                <button
+                  *ngIf="canEdit(tablePage, row)"
+                  (click)="open(tablePage, row)"
+                >
+                  Edit</button
+                ><button
+                  *ngFor="let a of actions(tablePage, row)"
+                  (click)="action(a, tablePage, row)"
+                  [disabled]="busy"
+                >
+                  {{ a }}</button
+                ><button
+                  class="danger-text"
+                  *ngIf="can(tablePage.deleteRoles)"
+                  (click)="remove(tablePage, row)"
+                >
+                  Delete
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="empty" *ngIf="!loading && !filtered.length">
+        <h3>No records to show</h3>
+        <p>Add a record or adjust your search.</p>
+      </div>
+      <div class="table-footer">
+        {{ filtered.length }} of {{ rows.length }} records
+        <span>Times displayed in your browser's local timezone</span>
+      </div>
+    </section>
+    <footer class="main-footer">
+      <span>{{ config.title }} · Portfolio edition</span
+      ><span>Angular → ASP.NET Core → SQL Server</span>
+    </footer>
+  </main>
+</div>
+<div class="overlay" *ngIf="modal && user">
+  <section
+    class="modal"
+    [class.large]="formPage.key === 'orders'"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="form-title"
+  >
+    <div class="modal-heading">
+      <div>
+        <span class="eyebrow">{{ config.title }}</span>
+        <h2 id="form-title">{{ formTitle }}</h2>
+      </div>
+      <button
+        class="close"
+        aria-label="Close form"
+        [disabled]="busy"
+        (click)="modal = false"
+      >
+        ×
+      </button>
+    </div>
+    <div class="alert error" *ngIf="error" role="alert">{{ error }}</div>
+    <form #entry="ngForm" (ngSubmit)="save()">
+      <div class="form-grid">
+        <div *ngFor="let f of formFields" [class.full]="f.type === 'textarea'">
+          <label [for]="f.key">{{ f.label }}</label
+          ><select
+            *ngIf="f.type === 'select'"
+            [id]="f.key"
+            [name]="f.key"
+            [(ngModel)]="form[f.key]"
+            [required]="!f.optional"
+          >
+            <option [ngValue]="null">Choose…</option>
+            <option *ngFor="let o of options(f)" [ngValue]="o.id">
+              {{ o.name }}
+            </option></select
+          ><textarea
+            *ngIf="f.type === 'textarea'"
+            [id]="f.key"
+            [name]="f.key"
+            [(ngModel)]="form[f.key]"
+            [required]="!f.optional"
+            [maxlength]="f.max || 500"
+            rows="3"
+          ></textarea
+          ><input
+            *ngIf="!['select', 'textarea'].includes(f.type)"
+            [id]="f.key"
+            [type]="f.type"
+            [name]="f.key"
+            [(ngModel)]="form[f.key]"
+            [required]="!f.optional"
+            [attr.min]="f.min"
+            [attr.max]="f.type === 'number' ? f.max : null"
+            [attr.step]="f.step || (f.type === 'number' ? '1' : null)"
+            [minlength]="f.minlength || 0"
+            [maxlength]="f.type === 'password' ? 128 : 160"
+            [email]="f.type === 'email'"
+            autocomplete="off"
+          />
+        </div>
+      </div>
+      <section class="order-lines" *ngIf="formPage.key === 'orders'">
+        <h3>Order lines</h3>
+        <div class="line-labels">
+          <span>Product</span><span>Quantity</span><span>Unit price</span
+          ><span></span>
+        </div>
+        <div class="order-line" *ngFor="let line of form.lines; let i = index">
+          <select
+            [attr.aria-label]="'Product ' + (i + 1)"
+            [name]="'product' + i"
+            [(ngModel)]="line.productId"
+            (ngModelChange)="lineProduct(line)"
+            required
+          >
+            <option [ngValue]="null">Select product</option>
+            <ng-container *ngFor="let product of data.products"
+              ><option *ngIf="product.active" [ngValue]="product.id">
+                {{ product.name }}
+              </option></ng-container
+            ></select
+          ><input
+            type="number"
+            [attr.aria-label]="'Quantity ' + (i + 1)"
+            [name]="'quantity' + i"
+            [(ngModel)]="line.quantity"
+            required
+            min="1"
+            step="1"
+          /><input
+            type="number"
+            [attr.aria-label]="'Unit price ' + (i + 1)"
+            [name]="'price' + i"
+            [(ngModel)]="line.unitPrice"
+            required
+            min="0"
+            step="0.01"
+          /><button
+            type="button"
+            class="close"
+            [disabled]="form.lines.length === 1"
+            (click)="form.lines.splice(i, 1)"
+            aria-label="Remove line"
+          >
+            ×
+          </button>
+        </div>
+        <button
+          type="button"
+          class="text-button"
+          (click)="
+            form.lines.push({ productId: null, quantity: 1, unitPrice: 0 })
+          "
+        >
+          + Add line</button
+        ><strong class="order-total"
+          >Total: {{ orderTotal | number: "1.2-2" }}</strong
+        >
+        <p>
+          Prices use one configured business currency. Tax and discounts are not
+          applied.
+        </p>
+      </section>
+      <div *ngIf="formPage.key === 'bookings'" class="availability">
+        <button type="button" class="secondary" (click)="checkAvailability()">
+          Check availability
+        </button>
+        <p role="status">{{ availability }}</p>
+        <small>Maximum 4 hours per reservation, up to 30 days ahead.</small>
+      </div>
+      <div class="form-actions">
+        <button
+          type="button"
+          class="secondary"
+          (click)="modal = false"
+          [disabled]="busy"
+        >
+          Cancel</button
+        ><button class="primary" [disabled]="entry.invalid || busy">
+          {{ busy ? "Saving…" : "Save changes" }}
+        </button>
+      </div>
+    </form>
+  </section>
+</div>
+<div class="overlay" *ngIf="detail && user">
+  <section
+    class="modal large detail-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="detail-title"
+  >
+    <div class="modal-heading">
+      <h2 id="detail-title">
+        {{ detail.invoice ? "Order #" + detailRow.id : detailRow.title }}
+      </h2>
+      <button class="close" aria-label="Close details" (click)="detail = null">
+        ×
+      </button>
+    </div>
+    <div class="alert error" *ngIf="error" role="alert">{{ error }}</div>
+    <div *ngIf="detail.invoice" class="invoice">
+      <h2>
+        {{
+          detailRow.kind === "Sale" && detailRow.status === "Posted"
+            ? "INVOICE"
+            : "ORDER SUMMARY"
+        }}
+      </h2>
+      <p>{{ config.title }} · #{{ detailRow.id }}</p>
+      <p>{{ detailRow.party }} · {{ detailRow.status }}</p>
+      <p>{{ display(detailRow.createdAt, "createdAt") }}</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Quantity</th>
+            <th>Unit price</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let l of detailRow.lines">
+            <td>{{ l.product }}</td>
+            <td>{{ l.quantity }}</td>
+            <td>{{ l.unitPrice | number: "1.2-2" }}</td>
+            <td>{{ l.total | number: "1.2-2" }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <h3 class="order-total">Total {{ detailRow.total | number: "1.2-2" }}</h3>
+      <p>No tax or discounts applied. Single business currency.</p>
+      <button class="primary no-print" (click)="print()">
+        Print / save PDF
+      </button>
+    </div>
+    <div *ngIf="!detail.invoice">
+      <p class="ticket-description">{{ detailRow.description }}</p>
+      <span class="badge">{{ detailRow.status }}</span>
+      <h3>Conversation</h3>
+      <div class="comment" *ngFor="let c of detail.comments">
+        <div>
+          <strong>{{ c.author }}</strong
+          ><small
+            >{{ display(c.at, "at") }}
+            <b *ngIf="c.internal"> · Staff only</b></small
+          >
+        </div>
+        <p>{{ c.body }}</p>
+      </div>
+      <p *ngIf="!detail.comments.length">No comments yet.</p>
+      <form *ngIf="detailRow.status !== 'Closed'" (ngSubmit)="addComment()">
+        <label for="comment">Your comment</label
+        ><textarea
+          id="comment"
+          name="comment"
+          [(ngModel)]="comment"
+          required
+          maxlength="4000"
+          rows="3"
+        ></textarea
+        ><label class="checkbox" *ngIf="staff"
+          ><input
+            type="checkbox"
+            name="internal"
+            [(ngModel)]="internal"
+          />Internal staff note</label
+        ><button class="primary" [disabled]="!comment.trim() || busy">
+          Add comment
+        </button>
+      </form>
+      <h3>Ticket history</h3>
+      <div class="event" *ngFor="let e of detail.history">
+        <span>{{ e.description }}</span
+        ><small>{{ display(e.at, "at") }}</small>
+      </div>
+    </div>
+  </section>
+</div>
