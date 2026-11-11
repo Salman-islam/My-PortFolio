@@ -1,0 +1,26 @@
+@baseUrl = http://localhost:5080
+GET {{baseUrl}}/api/health
+### List
+GET {{baseUrl}}/api/tickets
+### Create
+POST {{baseUrl}}/api/tickets
+Content-Type: application/json
+
+{
+  "title": "Cannot access the staff portal",
+  "requester": "sara@example.com",
+  "priority": "High",
+  "status": "Open"
+}
+### Update (replace id as needed)
+PUT {{baseUrl}}/api/tickets/1
+Content-Type: application/json
+
+{
+  "title": "Cannot access the staff portal",
+  "requester": "sara@example.com",
+  "priority": "High",
+  "status": "Open"
+}
+### Delete
+DELETE {{baseUrl}}/api/tickets/1
